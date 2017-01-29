@@ -1,0 +1,12 @@
+{
+  "aliases": [
+    "terra-hubot.now.sh"
+  ],
+  "env": {
+    "HUBOT_SLACK_TOKEN": "@hubot_slack_token",
+    "HUBOT_GITHUB_API_TOKEN": "@hubot_github_api_token"
+  },
+  "type": "docker",
+  "email": "mjhenkes@gmail.com",
+  "token": "YsHNqlH3KY9kZgTk9HzqYnvq"
+}
