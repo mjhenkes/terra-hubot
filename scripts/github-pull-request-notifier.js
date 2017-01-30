@@ -37,18 +37,23 @@ module.exports = function(robot) {
   robot.router.post("/hubot/gh-pull-requests", function(req, res) {
     var query = querystring.parse(url.parse(req.url).query);
     var room = query.room;
-    var delay=1000; //1 second
+    var type = req.headers["x-github-event"];
+    var delay=0; //2 second
 
-    if (!validateHook(req.headers["x-github-event"], req.body)) {
+    if (type == 'pull_request') {
+      delay=2000; // Delay for 2 seconds to give status services a chance to set statuses to pending.
+    }
+
+    if (!validateHook(type, req.body)) {
       return res.end("");
     }
 
     try {
       setTimeout(function() {
-        gatherStatusParameters(req.headers["x-github-event"], req.body, function(owner, repo, ref) {
+        gatherStatusParameters(type, req.body, function(owner, repo, ref) {
           getPRStatus(owner,repo, ref, function(status){
             if(status != 'pending') {
-              gatherPullRequestParameters(req.headers["x-github-event"], req.body, function(title, user, link, body) {
+              gatherPullRequestParameters(type, req.body, function(title, user, link, body) {
                 announcePullRequest(title, user, link, body, status, function(what) {
                   return robot.messageRoom(room, what);
                 });
@@ -142,6 +147,14 @@ getPRStatus = function(owner, repo, ref, callback) {
     var status = 'none';
     if (combinedStatus.total_count > 0) {
       status = combinedStatus.state
+      if (status == "failure" || status == "error") {
+        for (var i = combinedStatus.statuses.length - 1; i >= 0; i--) {
+          if (combinedStatus.statuses[i].state == 'pending') {
+            status = 'pending';
+            break;
+          }
+        }
+      }
     }
     // console.log('status: '+ status);
     return callback(status);
