@@ -50,9 +50,9 @@ module.exports = function(robot) {
 
     try {
       setTimeout(function() {
-        gatherStatusParameters(type, req.body, function(owner, repo, ref) {
-          getPRStatus(owner,repo, ref, function(status){
-            if(status != 'pending') {
+        gatherStatusParameters(type, req.body, function(owner, repo, ref, date, id) {
+          getPRStatus(owner, repo, ref, date, id, function(status){
+            if(status == 'success' || status == 'failure' || status == 'error' || status == 'none') {
               gatherPullRequestParameters(type, req.body, function(title, user, link, body) {
                 announcePullRequest(title, user, link, body, status, function(what) {
                   return robot.messageRoom(room, what);
@@ -82,10 +82,10 @@ validateHook = function (type, hook_data) {
 
 gatherStatusParameters = function (type, hook_data, callback) {
   if (type == 'pull_request') {
-    return callback(hook_data.repository.owner.login, hook_data.repository.name, hook_data.pull_request.head.sha)
+    return callback(hook_data.repository.owner.login, hook_data.repository.name, hook_data.pull_request.head.sha, null, null)
   }
   else if (type == 'status') {
-    return callback(hook_data.repository.owner.login, hook_data.repository.name, hook_data.sha)
+    return callback(hook_data.repository.owner.login, hook_data.repository.name, hook_data.sha, new Date(hook_data.updated_at), hook_data.id)
   }
 };
 
@@ -135,7 +135,7 @@ setupGithubApi = function() {
   return github;
 };
 
-getPRStatus = function(owner, repo, ref, callback) {
+getPRStatus = function(owner, repo, ref, updatedAt, id, callback) {
   var github = setupGithubApi();
 
   github.repos.getCombinedStatus({
@@ -147,6 +147,7 @@ getPRStatus = function(owner, repo, ref, callback) {
     var status = 'none';
     if (combinedStatus.total_count > 0) {
       status = combinedStatus.state
+      // all checks must be completed before annoucing a failure
       if (status == "failure" || status == "error") {
         for (var i = combinedStatus.statuses.length - 1; i >= 0; i--) {
           if (combinedStatus.statuses[i].state == 'pending') {
@@ -155,6 +156,16 @@ getPRStatus = function(owner, repo, ref, callback) {
           }
         }
       }
+      // if a status succeeds, only notify if the initiating status was the last.
+      else if (status == 'success' && id && updatedAt)
+        for (var i = combinedStatus.statuses.length - 1; i >= 0; i--) {
+          var item = combinedStatus.statuses[i];
+          var date = new Date(item.updated_at);
+          if (item.id != id && date > updatedAt) {
+            status = 'no-op';
+            break;
+          }
+        }
     }
     // console.log('status: '+ status);
     return callback(status);
