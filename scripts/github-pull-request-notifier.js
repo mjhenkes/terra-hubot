@@ -38,10 +38,10 @@ module.exports = function(robot) {
     var query = querystring.parse(url.parse(req.url).query);
     var room = query.room;
     var type = req.headers["x-github-event"];
-    var delay=0; //2 second
+    var delay=0;
 
     if (type == 'pull_request') {
-      delay=2000; // Delay for 2 seconds to give status services a chance to set statuses to pending.
+      delay=15000; // Delay for 15 seconds to give status services a chance to set statuses to pending.
     }
 
     if (!validateHook(type, req.body)) {
