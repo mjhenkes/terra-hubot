@@ -174,9 +174,18 @@ getPRStatus = function(owner, repo, ref, updatedAt, id, callback) {
 
 buildStatusLine = function(status) {
   if (status == "failure" || status == "error") {
-    return "\n*Ah, Mediocre!* Checks have failed.";
+    var failureResponses = [
+      "\n*Ah, Mediocre!* Checks have failed.",
+      "\n*Patience!* Checks have failed.",
+    ]
+    return failureResponses[Math.floor(Math.random() * failureResponses.length)];
   } else if (status == "success") {
-    return "\n*You shall ride eternal. Shiny, and chrome.* Checks have succeeded";
+    var succesResponses = [
+      "\n*You shall ride eternal. Shiny, and chrome.* Checks have succeeded",
+      "\n*I myself will carry you to the gates of Valhalla!* Checks have succeeded",
+      "\n*I am your redeemer. It is by my hand you will rise from the ashes of this world.* Checks have succeeded",
+    ]
+    return succesResponses[Math.floor(Math.random() * succesResponses.length)];
   }
   return '';
 };
